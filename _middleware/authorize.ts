@@ -1,5 +1,5 @@
 import jwt from 'express-jwt';
-import config from '../config.json';
+import config from '../_helpers/config';
 import db from '../_helpers/db';
 
 const { secret } = config;
@@ -15,7 +15,7 @@ export default function authorize(roles: any = []) {
       if (!account || (roles.length && !roles.includes(account.role))) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      
+
       req.user.role = account.role;
       const refreshTokens = await account.getRefreshTokens();
       req.user.ownsToken = (token: any) => !!refreshTokens.find((x: any) => x.token === token);

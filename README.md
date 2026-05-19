@@ -1,183 +1,109 @@
-# TypeScript CRUD API — Node.js, Express & MySQL
+# Full-Stack Authentication System - Backend API (Node.js, Express & MySQL)
 
-A fully-typed REST API that manages user records, built with TypeScript, Express, Sequelize, and MySQL.
+This is the backend service for the Full-Stack Authentication System. It provides robust user management, sign-up with email verification, secure login (JWT and HttpOnly cookie refresh tokens), password reset, and role-based access control (RBAC).
+
+## Features
+
+- **TypeScript-powered REST API** built with Express and Sequelize.
+- **Dynamic Database Failover**: Connects to MySQL in production, and automatically falls back to SQLite in-memory for zero-config testing if MySQL is unavailable.
+- **Secure Authentication**: Uses short-lived JWT access tokens (15 mins) in memory and secure, HttpOnly refresh tokens in cookies (7 days).
+- **Email Verification**: Sends validation links upon signup (using Ethereal SMTP mailers).
+- **Interactive Swagger Documentation**: Exposed at `/api-docs` using OpenAPI/Swagger.
+- **Environment Configuration**: Supported via system environment variables and local `.env` files.
+
+---
+
+## Live Deployment Link
+* **Production API Endpoint**: [https://camangyan-auth-api.onrender.com](https://camangyan-auth-api.onrender.com)
+* **API Documentation (Swagger)**: [https://camangyan-auth-api.onrender.com/api-docs](https://camangyan-auth-api.onrender.com/api-docs)
 
 ---
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Node.js | ≥ 18 |
-| MySQL | ≥ 8 |
-| npm | ≥ 9 |
+- **Node.js**: `v20` or higher
+- **NPM**: `v10` or higher
+- **MySQL**: Local or remote instance (optional, falls back to SQLite)
 
 ---
 
-## Setup
+## Getting Started (Local Development)
 
-### 1. Clone & install dependencies
+### 1. Install Dependencies
 ```bash
-git clone <repo-url>
-cd typescript-crud-api
 npm install
 ```
 
-### 2. Create the MySQL database
-```sql
-CREATE DATABASE typescript_crud_db;
+### 2. Configure Environment Variables
+Create a `.env` file in the root of this project (it is already ignored in `.gitignore`) and fill it based on `.env.example`:
+
+```ini
+PORT=4000
+NODE_ENV=development
+
+# MySQL Database Configurations
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_DATABASE=node_mysql_api
+
+# JWT Secret
+JWT_SECRET=YOUR_SUPER_SECRET_KEY
+
+# SMTP Server Options (Ethereal Mailer details)
+EMAIL_FROM=info@my-node-api.com
+SMTP_HOST=smtp.ethereal.email
+SMTP_PORT=587
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_pass
+
+# Allowed CORS Origin (Frontend URL)
+CORS_ORIGIN=http://localhost:4200
 ```
 
-### 3. Configure the app
-Edit `config.json` in the project root:
-```json
-{
-  "database": {
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "your_password",
-    "database": "typescript_crud_db"
-  },
-  "secret": "your-super-secret-jwt-key"
-}
-```
-
-### 4. Start the development server
+### 3. Start Development Server
 ```bash
 npm run start:dev
 ```
-You should see:
-```
-✅ Database connection established.
-✅ All models synced.
-✅ Server running on http://localhost:4000
-```
-
-### 5. Build for production
-```bash
-npm run build
-npm start
-```
+If MySQL is not started, the console will show:
+`MySQL connection failed. Falling back to SQLite in-memory database.`
+And the server will still run successfully using SQLite.
 
 ---
 
-## Project Structure
+## Production Deployment (e.g. Render)
 
-```
-typescript-crud-api/
-├── src/
-│   ├── _helpers/
-│   │   ├── db.ts              # Sequelize initialization & model registry
-│   │   └── role.ts            # Role enum (Admin | User)
-│   ├── _middleware/
-│   │   ├── errorHandler.ts    # Global error handler
-│   │   └── validateRequest.ts # Joi schema validation factory
-│   ├── users/
-│   │   ├── user.model.ts      # Sequelize model + TypeScript interfaces
-│   │   ├── user.service.ts    # Business logic (CRUD + bcrypt)
-│   │   └── users.controller.ts# Express routes + Joi schemas
-│   └── server.ts              # Entry point
-├── config.json                # DB config & JWT secret
-├── tsconfig.json              # TypeScript compiler options
-└── package.json
-```
+### 1. Create a Web Service on Render
+* Connect your GitHub repository: `https://github.com/camangyan29jerry-ops/node-mysql-boilerplate-api.git`
+* **Environment**: `Node`
+* **Build Command**: `npm run build`
+* **Start Command**: `node dist/server.js`
+
+### 2. Environment Variables Configuration
+Set the following environment variables in the Render Dashboard:
+- `NODE_ENV` = `production`
+- `JWT_SECRET` = `(Generate a long secure random string)`
+- `CORS_ORIGIN` = `https://your-frontend-deployment.onrender.com` (Your frontend URL)
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_DATABASE` (Remote MySQL credentials)
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` (SMTP credentials)
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/users` | Get all users |
-| GET | `/users/:id` | Get user by ID |
-| POST | `/users` | Create a new user |
-| PUT | `/users/:id` | Update a user |
-| DELETE | `/users/:id` | Delete a user |
-
----
-
-## Testing with Postman / curl
-
-### Create a user (POST /users)
-```bash
-curl -X POST http://localhost:4000/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Jane",
-    "lastName": "Doe",
-    "email": "jane@example.com",
-    "role": "User",
-    "password": "secret123"
-  }'
-```
-**Expected:** `200 OK` with the created user object (passwordHash excluded).
-
----
-
-### Get all users (GET /users)
-```bash
-curl http://localhost:4000/users
-```
-**Expected:** `200 OK` with an array of user objects.
-
----
-
-### Get user by ID (GET /users/:id)
-```bash
-curl http://localhost:4000/users/1
-```
-**Expected:** `200 OK` with a single user object.  
-**If not found:** `404` with `{ "message": "User not found" }`.
-
----
-
-### Update a user (PUT /users/:id)
-```bash
-curl -X PUT http://localhost:4000/users/1 \
-  -H "Content-Type: application/json" \
-  -d '{ "firstName": "Janet" }'
-```
-**Expected:** `200 OK` with the updated user object.
-
----
-
-### Delete a user (DELETE /users/:id)
-```bash
-curl -X DELETE http://localhost:4000/users/1
-```
-**Expected:** `200 OK` with `{ "message": "User deleted successfully" }`.
-
----
-
-### Validation error (missing required field)
-```bash
-curl -X POST http://localhost:4000/users \
-  -H "Content-Type: application/json" \
-  -d '{ "firstName": "Jane" }'
-```
-**Expected:** `400 Bad Request` with a descriptive validation message.
-
----
-
-## Common Errors & Fixes
-
-| Error | Fix |
-|-------|-----|
-| `Access denied for user 'root'` | Check `config.json` credentials |
-| `Unknown database` | Run `CREATE DATABASE typescript_crud_db;` in MySQL |
-| `ECONNREFUSED` | Make sure MySQL server is running |
-| TypeScript compile errors | Run `npx tsc --noEmit` to see all type errors |
-
----
-
-## TypeScript Highlights
-
-- `strict: true` — full type checking enabled
-- `UserAttributes` interface — defines exact shape of a user
-- `Role` enum — replaces magic strings (`'Admin'`, `'User'`)
-- `Partial<UserCreationAttributes>` — safe partial updates
-- `Promise<T>` return types — explicit async function signatures
-- Joi + TypeScript — compile-time **and** runtime validation
-
-
+- **Swagger Documentation**: `/api-docs` (Interactive UI)
+- **Authentication Routes**:
+  - `POST /accounts/authenticate` - Authenticates user & returns JWT + sets cookie
+  - `POST /accounts/refresh-token` - Refreshes expired JWT
+  - `POST /accounts/revoke-token` - Revokes refresh token
+  - `POST /accounts/register` - Registers new user
+  - `POST /accounts/verify-email` - Verifies registration
+  - `POST /accounts/forgot-password` - Requests reset link
+  - `POST /accounts/reset-password` - Resets password
+- **User Management (Admin/Owner only)**:
+  - `GET /accounts` - Gets all accounts
+  - `GET /accounts/:id` - Gets account details
+  - `POST /accounts` - Creates new account (pre-verified)
+  - `PUT /accounts/:id` - Updates details
+  - `DELETE /accounts/:id` - Deletes account

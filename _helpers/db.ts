@@ -1,4 +1,4 @@
-import config from '../config.json';
+import config from './config';
 import mysql from 'mysql2/promise';
 import { Sequelize } from 'sequelize';
 import accountModel from '../accounts/account.model';
@@ -14,14 +14,20 @@ async function initialize() {
   let sequelize;
 
   try {
-    // Attempt connecting to MySQL server
-    const connection = await mysql.createConnection({ host, port, user, password });
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
-    await connection.end();
+    if (process.env.NODE_ENV === 'production' || process.env.DB_HOST) {
+      // In production, connect directly to the database without attempting CREATE DATABASE
+      sequelize = new Sequelize(database, user, password, { host, port, dialect: 'mysql', logging: false });
+      await sequelize.authenticate();
+      console.log(`Connected directly to MySQL database: ${database}`);
+    } else {
+      // Locally, try to create the database if it doesn't exist
+      const connection = await mysql.createConnection({ host, port, user, password });
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
+      await connection.end();
 
-    // Initialize Sequelize with MySQL
-    sequelize = new Sequelize(database, user, password, { dialect: 'mysql', logging: false });
-    console.log(`Connected to MySQL database: ${database}`);
+      sequelize = new Sequelize(database, user, password, { host, port, dialect: 'mysql', logging: false });
+      console.log(`Connected to MySQL database: ${database}`);
+    }
   } catch (err: any) {
     console.warn(`MySQL connection failed (${err.message}). Falling back to SQLite in-memory database.`);
     sequelize = new Sequelize('sqlite::memory:', { logging: false });

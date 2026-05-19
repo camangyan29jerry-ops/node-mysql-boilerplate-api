@@ -1,4 +1,4 @@
-import config from '../config.json';
+import config from '../_helpers/config';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -42,13 +42,13 @@ async function refreshToken({ token, ipAddress }: any) {
   const refreshToken = await getRefreshToken(token);
   const account = await refreshToken.getAccount();
   const newRefreshToken = generateRefreshToken(account, ipAddress);
-  
+
   refreshToken.revoked = Date.now();
   refreshToken.revokedByIp = ipAddress;
   refreshToken.replacedByToken = newRefreshToken.token;
   await refreshToken.save();
   await newRefreshToken.save();
-  
+
   const jwtToken = generateJwtToken(account);
   return {
     ...basicDetails(account),
